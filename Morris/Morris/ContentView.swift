@@ -1,24 +1,27 @@
-//
-//  ContentView.swift
-//  Morris
-//
-//  Created by Jelle Weijland on 29/04/2026.
-//
-
 import SwiftUI
 
+// Root coordinator — switches between app states
 struct ContentView: View {
+    @EnvironmentObject var appVM: AppViewModel
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            switch appVM.appState {
+            case .welcome:
+                WelcomeView()
+                    .transition(.opacity)
+            case .onboarding:
+                OnboardingView()
+                    .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+            case .main:
+                MainTabView()
+                    .transition(.opacity)
+            }
         }
-        .padding()
+        .animation(.easeInOut(duration: 0.35), value: appVM.appState)
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView().environmentObject(AppViewModel())
 }
