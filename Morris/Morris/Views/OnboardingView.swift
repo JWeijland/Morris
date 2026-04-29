@@ -239,6 +239,8 @@ struct WMTextField: View {
             Image(systemName: icon).font(.system(size: 15)).foregroundColor(.wmPrimary).frame(width: 22)
             TextField(placeholder, text: $text)
                 .font(WMFont.body())
+                .foregroundColor(Color.wmText)
+                .tint(Color.wmPrimary)
                 .keyboardType(keyboardType)
         }
         .padding(14)
@@ -264,7 +266,8 @@ struct WMTextArea: View {
             }
             TextEditor(text: $text)
                 .font(WMFont.body())
-                .foregroundColor(.wmText)
+                .foregroundColor(Color.wmText)
+                .tint(Color.wmPrimary)
                 .padding(10)
                 .frame(minHeight: minHeight)
                 .scrollContentBackground(.hidden)

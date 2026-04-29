@@ -132,6 +132,8 @@ struct ChatView: View {
             HStack {
                 TextField("Message...", text: $draft)
                     .font(WMFont.body())
+                    .foregroundColor(Color.wmText)
+                    .tint(Color.wmPrimary)
                     .submitLabel(.send)
                     .onSubmit { send() }
             }
