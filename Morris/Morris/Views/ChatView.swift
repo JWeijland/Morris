@@ -108,7 +108,7 @@ struct ChatView: View {
                 }
                 .padding(WMSpacing.md)
             }
-            .onChange(of: messages.count) { _ in
+            .onChange(of: messages.count) {
                 if let last = messages.last {
                     withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
