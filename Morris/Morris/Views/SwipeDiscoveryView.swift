@@ -1,12 +1,16 @@
 import SwiftUI
 
+private struct MatchPresentation: Identifiable {
+    let id = UUID()
+    let seniorUser: User
+    let match: Match
+}
+
 struct SwipeDiscoveryView: View {
     @EnvironmentObject var appVM: AppViewModel
     @StateObject private var vm: DiscoveryViewModel
 
-    @State private var matchedUser: User?
-    @State private var triggeredMatch: Match?
-    @State private var showMatchSheet = false
+    @State private var pendingMatch: MatchPresentation?
 
     init(appViewModel: AppViewModel) {
         _vm = StateObject(wrappedValue: DiscoveryViewModel(appViewModel: appViewModel))
@@ -32,17 +36,13 @@ struct SwipeDiscoveryView: View {
         }
         .onAppear {
             vm.onMatchTriggered = { user, match in
-                matchedUser = user
-                triggeredMatch = match
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                    showMatchSheet = true
+                    pendingMatch = MatchPresentation(seniorUser: user, match: match)
                 }
             }
         }
-        .sheet(isPresented: $showMatchSheet) {
-            if let user = matchedUser, let match = triggeredMatch {
-                MatchView(seniorUser: user, match: match)
-            }
+        .sheet(item: $pendingMatch) { data in
+            MatchView(seniorUser: data.seniorUser, match: data.match)
         }
     }
 
@@ -82,15 +82,10 @@ struct SwipeDiscoveryView: View {
 
     private var actionButtons: some View {
         HStack(spacing: 20) {
-            // Pass
-            Button {
-                vm.decide(save: false)
-            } label: {
+            Button { vm.decide(save: false) } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("Pass")
-                        .font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "xmark").font(.system(size: 14, weight: .semibold))
+                    Text("Pass").font(.system(size: 15, weight: .semibold))
                 }
                 .foregroundColor(.wmTextSecondary)
                 .frame(maxWidth: .infinity)
@@ -100,15 +95,10 @@ struct SwipeDiscoveryView: View {
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.wmBorder, lineWidth: 1.5))
             }
 
-            // Save / Connect
-            Button {
-                vm.decide(save: true)
-            } label: {
+            Button { vm.decide(save: true) } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("Connect")
-                        .font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "checkmark").font(.system(size: 14, weight: .semibold))
+                    Text("Connect").font(.system(size: 15, weight: .semibold))
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
@@ -126,16 +116,10 @@ struct SwipeDiscoveryView: View {
 
     private var emptyState: some View {
         VStack(spacing: 20) {
-            Image(systemName: "tray")
-                .font(.system(size: 52))
-                .foregroundColor(.wmBorder)
-            Text("You've seen everyone")
-                .font(WMFont.heading())
-                .foregroundColor(.wmText)
+            Image(systemName: "tray").font(.system(size: 52)).foregroundColor(.wmBorder)
+            Text("You've seen everyone").font(WMFont.heading()).foregroundColor(.wmText)
             Text("New profiles are added regularly.\nCheck back tomorrow or broaden your industry.")
-                .font(WMFont.body())
-                .foregroundColor(.wmTextSecondary)
-                .multilineTextAlignment(.center)
+                .font(WMFont.body()).foregroundColor(.wmTextSecondary).multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
