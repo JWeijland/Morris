@@ -109,7 +109,7 @@ struct ChatView: View {
     private var inputBar: some View {
         HStack(spacing: 10) {
             HStack {
-                TextField("Message...", text: $draft)
+                TextField("", text: $draft, prompt: Text("Message...").foregroundColor(.wmTextTertiary))
                     .font(WMFont.body())
                     .foregroundColor(Color.wmText)
                     .tint(Color.wmPrimary)

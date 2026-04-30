@@ -209,7 +209,7 @@ struct WMTextField: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: icon).font(.system(size: 15)).foregroundColor(.wmPrimary).frame(width: 22)
-            TextField(placeholder, text: $text)
+            TextField("", text: $text, prompt: Text(placeholder).foregroundColor(.wmTextTertiary))
                 .font(WMFont.body())
                 .foregroundColor(Color.wmText)
                 .tint(Color.wmPrimary)
