@@ -105,7 +105,10 @@ struct ScheduleCoffeeView: View {
             )
             .datePickerStyle(.graphical)
             .tint(.wmPrimary)
-            .wmCard(cornerRadius: 14, padding: 12)
+            .environment(\.colorScheme, .light)
+            .padding(12)
+            .background(Color.wmBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
     }
 
