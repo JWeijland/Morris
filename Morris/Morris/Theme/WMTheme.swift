@@ -3,19 +3,16 @@ import SwiftUI
 // MARK: - Colors
 
 extension Color {
-    static let wmBackground    = Color(wmHex: "#FAFAF7")
+    static let wmBackground    = Color(wmHex: "#F4F5F7")
     static let wmSurface       = Color.white
-    static let wmPrimary       = Color(wmHex: "#C17D3C")
-    static let wmPrimaryLight  = Color(wmHex: "#F0C48A")
-    static let wmPrimaryDark   = Color(wmHex: "#8B5728")
+    static let wmPrimary       = Color(wmHex: "#2D3A5E")
+    static let wmAccent        = Color(wmHex: "#E8A84D")
     static let wmText          = Color(wmHex: "#1C1C1E")
     static let wmTextSecondary = Color(wmHex: "#6B7280")
     static let wmTextTertiary  = Color(wmHex: "#9CA3AF")
-    static let wmBorder        = Color(wmHex: "#E5E0D8")
-    static let wmSuccess       = Color(wmHex: "#4CAF77")
-    static let wmDanger        = Color(wmHex: "#E05252")
-    static let wmGold          = Color(wmHex: "#D4AF37")
-    static let wmCardShadow    = Color.black.opacity(0.07)
+    static let wmBorder        = Color(wmHex: "#E5E7EB")
+    static let wmSuccess       = Color(wmHex: "#34C759")
+    static let wmDanger        = Color(wmHex: "#FF3B30")
 
     init(wmHex: String) {
         let hex = wmHex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -25,7 +22,7 @@ extension Color {
         switch hex.count {
         case 6: (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
         case 8: (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default: (a, r, g, b) = (255, 193, 125, 60)
+        default: (a, r, g, b) = (255, 45, 58, 94)
         }
         self.init(.sRGB, red: Double(r)/255, green: Double(g)/255, blue: Double(b)/255, opacity: Double(a)/255)
     }
@@ -34,8 +31,8 @@ extension Color {
 // MARK: - Typography
 
 struct WMFont {
-    static func display(_ size: CGFloat = 32) -> Font { .system(size: size, weight: .bold, design: .rounded) }
-    static func heading(_ size: CGFloat = 22) -> Font { .system(size: size, weight: .semibold, design: .rounded) }
+    static func display(_ size: CGFloat = 32) -> Font { .system(size: size, weight: .bold, design: .default) }
+    static func heading(_ size: CGFloat = 22) -> Font { .system(size: size, weight: .semibold, design: .default) }
     static func subheading(_ size: CGFloat = 17) -> Font { .system(size: size, weight: .semibold, design: .default) }
     static func body(_ size: CGFloat = 15) -> Font { .system(size: size, weight: .regular, design: .default) }
     static func caption(_ size: CGFloat = 12) -> Font { .system(size: size, weight: .medium, design: .default) }
@@ -64,7 +61,7 @@ struct WMCardModifier: ViewModifier {
             .padding(padding)
             .background(Color.wmSurface)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .shadow(color: Color.wmCardShadow, radius: 12, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 3)
     }
 }
 
@@ -109,25 +106,6 @@ enum Industry: String, Codable, CaseIterable, Identifiable {
         case .hr:               return "person.2.fill"
         case .realEstate:       return "house.fill"
         case .other:            return "circle.grid.2x2.fill"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .finance:          return Color(wmHex: "#3B82F6")
-        case .consulting:       return Color(wmHex: "#6366F1")
-        case .technology:       return Color(wmHex: "#8B5CF6")
-        case .healthcare:       return Color(wmHex: "#10B981")
-        case .law:              return Color(wmHex: "#64748B")
-        case .marketing:        return Color(wmHex: "#EC4899")
-        case .education:        return Color(wmHex: "#F59E0B")
-        case .entrepreneurship: return Color(wmHex: "#F97316")
-        case .government:       return Color(wmHex: "#0EA5E9")
-        case .media:            return Color(wmHex: "#A855F7")
-        case .engineering:      return Color(wmHex: "#14B8A6")
-        case .hr:               return Color(wmHex: "#84CC16")
-        case .realEstate:       return Color(wmHex: "#EF4444")
-        case .other:            return Color(wmHex: "#9CA3AF")
         }
     }
 }

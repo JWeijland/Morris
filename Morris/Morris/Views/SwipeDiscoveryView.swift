@@ -4,10 +4,9 @@ struct SwipeDiscoveryView: View {
     @EnvironmentObject var appVM: AppViewModel
     @StateObject private var vm: DiscoveryViewModel
 
-    @State private var showMatchSheet = false
     @State private var matchedUser: User?
     @State private var triggeredMatch: Match?
-    @State private var showQuestion = false
+    @State private var showMatchSheet = false
 
     init(appViewModel: AppViewModel) {
         _vm = StateObject(wrappedValue: DiscoveryViewModel(appViewModel: appViewModel))
@@ -19,16 +18,10 @@ struct SwipeDiscoveryView: View {
                 Color.wmBackground.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Header
                     header
 
-                    if let question = appVM.currentQuestion {
-                        questionBanner(question: question)
-                    }
-
-                    // Card stack
                     if vm.hasMoreCards {
-                        cardStack
+                        cardArea
                         actionButtons
                     } else {
                         emptyState
@@ -41,7 +34,7 @@ struct SwipeDiscoveryView: View {
             vm.onMatchTriggered = { user, match in
                 matchedUser = user
                 triggeredMatch = match
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                     showMatchSheet = true
                 }
             }
@@ -51,12 +44,9 @@ struct SwipeDiscoveryView: View {
                 MatchView(seniorUser: user, match: match)
             }
         }
-        .sheet(isPresented: $showQuestion) {
-            YoungQuestionView()
-        }
     }
 
-    // MARK: - Subviews
+    // MARK: - Header
 
     private var header: some View {
         HStack {
@@ -65,111 +55,84 @@ struct SwipeDiscoveryView: View {
                     .font(WMFont.display(26))
                     .foregroundColor(.wmText)
                 Text("Senior professionals ready to help")
-                    .font(WMFont.body(13))
+                    .font(.system(size: 13))
                     .foregroundColor(.wmTextSecondary)
             }
             Spacer()
-            Button { showQuestion = true } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 26))
-                    .foregroundColor(.wmPrimary)
-            }
         }
         .padding(.horizontal, WMSpacing.md)
         .padding(.top, WMSpacing.md)
         .padding(.bottom, WMSpacing.sm)
     }
 
-    private func questionBanner(question: CareerQuestion) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "questionmark.bubble.fill")
-                .font(.system(size: 16))
-                .foregroundColor(.wmPrimary)
-            Text(question.title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.wmText)
-                .lineLimit(1)
-            Spacer()
-            Text("Edit")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.wmPrimary)
-                .onTapGesture { showQuestion = true }
-        }
-        .padding(12)
-        .background(Color.wmPrimaryLight.opacity(0.2))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .padding(.horizontal, WMSpacing.md)
-        .padding(.bottom, WMSpacing.sm)
-    }
+    // MARK: - Card area
 
-    private var cardStack: some View {
-        ZStack {
-            ForEach(vm.cards.indices.reversed(), id: \.self) { index in
-                if index >= vm.currentIndex && index < vm.currentIndex + 3 {
-                    let isTop = index == vm.currentIndex
-                    let stackOffset = CGFloat(index - vm.currentIndex)
-
-                    ProfileCardView(
-                        card: vm.cards[index],
-                        dragOffset: isTop ? vm.dragOffset : .zero,
-                        swipeIndicator: isTop ? vm.swipeIndicator : nil
-                    )
-                    .padding(.horizontal, 16)
-                    .scaleEffect(isTop ? 1 : 1 - stackOffset * 0.03)
-                    .offset(y: isTop ? 0 : stackOffset * 10)
-                    .zIndex(isTop ? 10 : Double(vm.cards.count - index))
-                    .gesture(isTop ? dragGesture : nil)
-                }
+    private var cardArea: some View {
+        Group {
+            if let card = vm.topCard {
+                ProfileCardView(card: card)
+                    .padding(.horizontal, WMSpacing.md)
+                    .opacity(vm.cardOpacity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .padding(.top, WMSpacing.sm)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var dragGesture: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                vm.isDragging = true
-                vm.dragOffset = value.translation
-            }
-            .onEnded { value in
-                vm.isDragging = false
-                let threshold: CGFloat = 100
-                if value.translation.width > threshold {
-                    vm.swipe(.interested)
-                } else if value.translation.width < -threshold {
-                    vm.swipe(.pass)
-                } else {
-                    withAnimation(.spring()) { vm.dragOffset = .zero }
-                }
-            }
-    }
+    // MARK: - Action buttons
 
     private var actionButtons: some View {
-        HStack(spacing: 32) {
-            WMCircleButton("xmark", color: .wmDanger, size: 60) {
-                vm.swipe(.pass)
+        HStack(spacing: 20) {
+            // Pass
+            Button {
+                vm.decide(save: false)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Pass")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundColor(.wmTextSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.wmSurface)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.wmBorder, lineWidth: 1.5))
             }
-            WMCircleButton("info.circle", color: .wmTextSecondary, size: 44) {
-                // TODO: Show full profile detail sheet
-            }
-            WMCircleButton("checkmark", color: .wmSuccess, size: 60) {
-                vm.swipe(.interested)
+
+            // Save / Connect
+            Button {
+                vm.decide(save: true)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Connect")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.wmPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
         }
+        .padding(.horizontal, WMSpacing.md)
         .padding(.bottom, WMSpacing.xl)
         .padding(.top, WMSpacing.md)
     }
 
+    // MARK: - Empty state
+
     private var emptyState: some View {
         VStack(spacing: 20) {
             Image(systemName: "tray")
-                .font(.system(size: 54))
+                .font(.system(size: 52))
                 .foregroundColor(.wmBorder)
             Text("You've seen everyone")
                 .font(WMFont.heading())
                 .foregroundColor(.wmText)
-            Text("New profiles are added regularly.\nCome back tomorrow or adjust your industry.")
+            Text("New profiles are added regularly.\nCheck back tomorrow or broaden your industry.")
                 .font(WMFont.body())
                 .foregroundColor(.wmTextSecondary)
                 .multilineTextAlignment(.center)

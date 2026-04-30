@@ -3,30 +3,22 @@ import SwiftUI
 import Combine
 
 enum OnboardingStep: Int, CaseIterable {
-    case roleConfirm
-    case basicInfo
-    case industryGoal
-    case linkedIn
+    case basics
+    case goal
+    case preview
     case done
 }
 
 class OnboardingViewModel: ObservableObject {
-    @Published var step: OnboardingStep = .roleConfirm
+    @Published var step: OnboardingStep = .basics
     @Published var name: String = ""
-    @Published var city: String = ""
-    @Published var age: String = ""
     @Published var selectedIndustry: Industry = .finance
-    @Published var careerGoal: String = ""
-    @Published var motivation: String = ""
-    @Published var linkedInPlaceholder: String = ""
-    @Published var showLinkedInImportAlert: Bool = false
+    @Published var goal: String = ""
 
     var selectedRole: UserRole
-    var onComplete: () -> Void
 
-    init(role: UserRole, onComplete: @escaping () -> Void) {
+    init(role: UserRole) {
         self.selectedRole = role
-        self.onComplete = onComplete
     }
 
     var progressFraction: Double {
@@ -35,18 +27,16 @@ class OnboardingViewModel: ObservableObject {
 
     var canAdvance: Bool {
         switch step {
-        case .roleConfirm:  return true
-        case .basicInfo:    return !name.isEmpty && !city.isEmpty
-        case .industryGoal: return !careerGoal.isEmpty
-        case .linkedIn:     return true
-        case .done:         return true
+        case .basics:   return !name.trimmingCharacters(in: .whitespaces).isEmpty
+        case .goal:     return !goal.trimmingCharacters(in: .whitespaces).isEmpty
+        case .preview:  return true
+        case .done:     return true
         }
     }
 
     func advance() {
         if let next = OnboardingStep(rawValue: step.rawValue + 1) {
             step = next
-            if next == .done { onComplete() }
         }
     }
 

@@ -9,8 +9,6 @@ struct ChatView: View {
     @State private var messages: [ChatMessage] = []
     @State private var draft: String = ""
     @State private var showSchedule = false
-    @State private var showVoiceNoteAlert = false
-    @State private var showVideoAlert = false
     @State private var showReport = false
 
     private var otherUser: User? {
@@ -34,23 +32,10 @@ struct ChatView: View {
         }
         .onAppear { loadMessages() }
         .sheet(isPresented: $showSchedule) { ScheduleCoffeeView(match: match) }
-        .alert("Voice notes", isPresented: $showVoiceNoteAlert) {
-            Button("OK") {}
-        } message: {
-            // TODO: Integrate AVFoundation voice recording
-            Text("Voice notes are coming in the next release.")
-        }
-        .alert("Video calls", isPresented: $showVideoAlert) {
-            Button("OK") {}
-        } message: {
-            // TODO: Integrate Whereby / Daily.co SDK
-            Text("Video calls are coming soon and will launch inside the app.")
-        }
         .alert("Report user", isPresented: $showReport) {
             Button("Report", role: .destructive) {}
             Button("Cancel", role: .cancel) {}
         } message: {
-            // TODO: Send report to moderation backend
             Text("Thank you. We'll review this conversation within 24 hours.")
         }
     }
@@ -60,16 +45,16 @@ struct ChatView: View {
     private func contextBanner(user: User) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(Color.wmPrimaryLight.opacity(0.35)).frame(width: 44, height: 44)
+                Circle().fill(Color.wmPrimary.opacity(0.12)).frame(width: 40, height: 40)
                 Text(user.initials)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundColor(.wmPrimaryDark)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.wmPrimary)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(user.name).font(WMFont.subheading(15)).foregroundColor(.wmText)
+                Text(user.name).font(WMFont.subheading(14)).foregroundColor(.wmText)
                 HStack(spacing: 4) {
                     Circle().fill(Color.wmSuccess).frame(width: 6, height: 6)
-                    Text("\(match.matchPercentage)% match · Career coffee")
+                    Text("Career coffee match")
                         .font(.system(size: 12)).foregroundColor(.wmTextSecondary)
                 }
             }
@@ -97,7 +82,7 @@ struct ChatView: View {
     private var messageList: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 12) {
+                LazyVStack(spacing: 10) {
                     ForEach(messages) { message in
                         MessageBubble(
                             message: message,
@@ -123,12 +108,6 @@ struct ChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            Button { showVoiceNoteAlert = true } label: {
-                Image(systemName: "waveform")
-                    .font(.system(size: 18))
-                    .foregroundColor(.wmPrimary)
-                    .frame(width: 40, height: 40)
-            }
             HStack {
                 TextField("Message...", text: $draft)
                     .font(WMFont.body())
@@ -139,19 +118,14 @@ struct ChatView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(Color(wmHex: "#F5F5F5"))
+            .background(Color.wmBackground)
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.wmBorder, lineWidth: 1))
 
-            Button { showVideoAlert = true } label: {
-                Image(systemName: "video.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.wmPrimary)
-                    .frame(width: 40, height: 40)
-            }
             Button { send() } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 32))
-                    .foregroundColor(draft.isEmpty ? .wmTextTertiary : .wmPrimary)
+                    .foregroundColor(draft.isEmpty ? .wmBorder : .wmPrimary)
             }
             .disabled(draft.isEmpty)
         }
@@ -175,8 +149,12 @@ struct ChatView: View {
         }
         ToolbarItem(placement: .navigationBarTrailing) {
             Menu {
-                Button { showReport = true } label: { Label("Report user", systemImage: "exclamationmark.triangle") }
-                Button { showSchedule = true } label: { Label("Schedule coffee", systemImage: "cup.and.saucer") }
+                Button { showReport = true } label: {
+                    Label("Report user", systemImage: "exclamationmark.triangle")
+                }
+                Button { showSchedule = true } label: {
+                    Label("Schedule coffee", systemImage: "cup.and.saucer")
+                }
             } label: {
                 Image(systemName: "ellipsis.circle").foregroundColor(.wmPrimary)
             }
@@ -222,7 +200,10 @@ struct MessageBubble: View {
                         .padding(.vertical, 10)
                         .background(isFromMe ? Color.wmPrimary : Color.wmSurface)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .shadow(color: isFromMe ? Color.wmPrimary.opacity(0.25) : Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(isFromMe ? Color.clear : Color.wmBorder, lineWidth: 1)
+                        )
                 }
                 Text(timeString)
                     .font(.system(size: 11))

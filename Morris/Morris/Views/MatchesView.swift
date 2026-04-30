@@ -20,7 +20,7 @@ struct MatchesView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Your Matches")
+                    Text("Chats")
                         .font(WMFont.heading())
                         .foregroundColor(.wmText)
                 }
@@ -34,29 +34,17 @@ struct MatchesView: View {
     }
 
     private var matchList: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                // Section header
-                HStack {
-                    Text("\(matches.count) career \(matches.count == 1 ? "match" : "matches")")
-                        .font(WMFont.caption())
-                        .foregroundColor(.wmTextSecondary)
-                        .textCase(.uppercase)
-                        .tracking(0.4)
-                    Spacer()
-                }
-                .padding(.horizontal, WMSpacing.md)
-                .padding(.top, WMSpacing.md)
-                .padding(.bottom, WMSpacing.sm)
-
-                VStack(spacing: 10) {
-                    ForEach(matches) { match in
-                        matchRow(match)
-                    }
-                }
-                .padding(.horizontal, WMSpacing.md)
+        List {
+            ForEach(matches) { match in
+                matchRow(match)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .listRowBackground(Color.wmBackground)
+                    .listRowSeparator(.hidden)
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .padding(.top, 4)
     }
 
     private func matchRow(_ match: Match) -> some View {
@@ -66,78 +54,78 @@ struct MatchesView: View {
             return appVM.data.user(for: otherId)
         }()
 
-        let lastMsg = appVM.data.messagesFor(matchId: match.id).last
+        let messages = appVM.data.messagesFor(matchId: match.id)
+        let lastMsg = messages.last
+        let hasUnread = messages.contains { !$0.isRead && $0.senderId != appVM.currentUser?.id }
 
         return Button {
             selectedMatch = match
             showChat = true
         } label: {
-            HStack(spacing: 14) {
-                // Avatar
-                ZStack {
-                    Circle()
-                        .fill(Color.wmPrimaryLight.opacity(0.4))
-                        .frame(width: 54, height: 54)
-                    Text(otherUser?.initials ?? "--")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(.wmPrimaryDark)
-                }
-                .overlay(alignment: .bottomTrailing) {
-                    if lastMsg != nil && !lastMsg!.isRead {
-                        Circle().fill(Color.wmPrimary).frame(width: 12, height: 12)
-                            .overlay(Circle().stroke(Color.wmSurface, lineWidth: 2))
-                    }
-                }
+            HStack(spacing: 0) {
+                // Unread indicator bar
+                Rectangle()
+                    .fill(hasUnread ? Color.wmAccent : Color.clear)
+                    .frame(width: 3)
+                    .clipShape(RoundedRectangle(cornerRadius: 2))
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(otherUser?.name ?? "Unknown")
-                            .font(WMFont.subheading(15))
-                            .foregroundColor(.wmText)
-                        Spacer()
-                        if let msg = lastMsg {
-                            Text(msg.sentAt, style: .relative)
-                                .font(.system(size: 11))
+                HStack(spacing: 12) {
+                    // Avatar
+                    ZStack {
+                        Circle()
+                            .fill(Color.wmPrimary.opacity(0.12))
+                            .frame(width: 50, height: 50)
+                        Text(otherUser?.initials ?? "--")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.wmPrimary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(otherUser?.name ?? "Unknown")
+                                .font(WMFont.subheading(15))
+                                .foregroundColor(.wmText)
+                                .fontWeight(hasUnread ? .semibold : .medium)
+                            Spacer()
+                            if let msg = lastMsg {
+                                Text(msg.sentAt, style: .relative)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.wmTextTertiary)
+                            }
+                        }
+
+                        if let msg = lastMsg, let text = msg.text {
+                            Text(text)
+                                .font(.system(size: 13))
+                                .foregroundColor(hasUnread ? .wmTextSecondary : .wmTextTertiary)
+                                .fontWeight(hasUnread ? .medium : .regular)
+                                .lineLimit(1)
+                        } else {
+                            Text("Career coffee match — say hello!")
+                                .font(.system(size: 13))
                                 .foregroundColor(.wmTextTertiary)
+                                .lineLimit(1)
                         }
                     }
-
-                    // Match score badge inline
-                    HStack(spacing: 6) {
-                        Text("\(match.matchPercentage)% match")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.wmPrimary)
-                        Text("·")
-                            .foregroundColor(.wmTextTertiary)
-                        Text(match.status == .coffeePlanned ? "Coffee planned ☕" : "Career coffee")
-                            .font(.system(size: 11))
-                            .foregroundColor(.wmTextSecondary)
-                    }
-
-                    if let msg = lastMsg, let text = msg.text {
-                        Text(text)
-                            .font(.system(size: 13))
-                            .foregroundColor(.wmTextSecondary)
-                            .lineLimit(1)
-                    }
                 }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
             }
-            .padding(14)
             .background(Color.wmSurface)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .shadow(color: .black.opacity(0.03), radius: 4, x: 0, y: 2)
         }
     }
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "cup.and.saucer")
+            Image(systemName: "bubble.left.and.bubble.right")
                 .font(.system(size: 52))
                 .foregroundColor(.wmBorder)
-            Text("No matches yet")
+            Text("No conversations yet")
                 .font(WMFont.heading())
                 .foregroundColor(.wmText)
-            Text("Keep swiping in Discover.\nWhen both sides show interest, you'll match here.")
+            Text("Connect with a mentor in Discover.\nYour conversations will appear here.")
                 .font(WMFont.body())
                 .foregroundColor(.wmTextSecondary)
                 .multilineTextAlignment(.center)

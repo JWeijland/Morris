@@ -2,9 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @EnvironmentObject var appVM: AppViewModel
-    // ViewModel is built in onAppear with the correct role
-    @StateObject private var vm = OnboardingViewModel(role: .youngProfessional, onComplete: {})
-    @State private var vmReady = false
+    @StateObject private var vm = OnboardingViewModel(role: .youngProfessional)
 
     var body: some View {
         NavigationStack {
@@ -16,15 +14,17 @@ struct OnboardingView: View {
 
                     Group {
                         switch vm.step {
-                        case .roleConfirm:  roleConfirmStep
-                        case .basicInfo:    basicInfoStep
-                        case .industryGoal: industryGoalStep
-                        case .linkedIn:     linkedInStep
-                        case .done:         EmptyView()
+                        case .basics:  basicsStep
+                        case .goal:    goalStep
+                        case .preview: previewStep
+                        case .done:    EmptyView()
                         }
                     }
-                    .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
-                    .animation(.easeInOut(duration: 0.3), value: vm.step)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+                    .animation(.easeInOut(duration: 0.28), value: vm.step)
 
                     Spacer()
                     navigationButtons
@@ -33,7 +33,7 @@ struct OnboardingView: View {
             .navigationBarBackButtonHidden()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if vm.step != .roleConfirm {
+                    if vm.step != .basics {
                         Button { vm.back() } label: {
                             Image(systemName: "chevron.left").foregroundColor(.wmPrimary)
                         }
@@ -42,87 +42,37 @@ struct OnboardingView: View {
             }
         }
         .onAppear {
-            // Wire the vm to the selected role + completion callback
             vm.selectedRole = appVM.selectedRole
         }
     }
 
-    // MARK: - Progress Bar
+    // MARK: - Progress bar
 
     private var progressBar: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Rectangle().fill(Color.wmBorder).frame(height: 3)
+                Rectangle().fill(Color.wmBorder).frame(height: 2)
                 Rectangle()
                     .fill(Color.wmPrimary)
-                    .frame(width: geo.size.width * vm.progressFraction, height: 3)
+                    .frame(width: geo.size.width * vm.progressFraction, height: 2)
                     .animation(.easeInOut, value: vm.progressFraction)
             }
         }
-        .frame(height: 3)
+        .frame(height: 2)
     }
 
     // MARK: - Steps
 
-    private var roleConfirmStep: some View {
+    private var basicsStep: some View {
         VStack(alignment: .leading, spacing: WMSpacing.lg) {
             stepHeader(
-                icon: appVM.isYoungUser ? "person.fill.questionmark" : "lightbulb.fill",
-                title: appVM.isYoungUser ? "You're looking for guidance" : "You want to share wisdom",
-                subtitle: appVM.isYoungUser
-                    ? "Let's set up your profile so we can find the right mentor for you."
-                    : "Let's set up your profile so young professionals can find you."
-            )
-            VStack(alignment: .leading, spacing: 12) {
-                Text("What you'll get:")
-                    .font(WMFont.subheading())
-                    .foregroundColor(.wmText)
-                ForEach(appVM.isYoungUser ? youngBenefits : seniorBenefits, id: \.self) { benefit in
-                    HStack(spacing: 10) {
-                        Image(systemName: "checkmark.circle.fill").foregroundColor(.wmSuccess)
-                        Text(benefit).font(WMFont.body()).foregroundColor(.wmTextSecondary)
-                    }
-                }
-            }
-            .wmCard(cornerRadius: 14, padding: 16)
-        }
-        .padding(WMSpacing.lg)
-    }
-
-    private var youngBenefits: [String] {
-        ["Matched with senior professionals in your field",
-         "Structured career conversations",
-         "First coffee on us — at a partner café",
-         "No awkward cold messages — both sides opt in"]
-    }
-
-    private var seniorBenefits: [String] {
-        ["Help the next generation succeed",
-         "Flexible — on your schedule",
-         "Meet interesting young talent",
-         "Build your legacy, one coffee at a time"]
-    }
-
-    private var basicInfoStep: some View {
-        VStack(alignment: .leading, spacing: WMSpacing.lg) {
-            stepHeader(icon: "person.circle", title: "Tell us about yourself", subtitle: "Basic info to personalise your experience.")
-            VStack(spacing: 14) {
-                WMTextField(placeholder: "Your full name", text: $vm.name, icon: "person")
-                WMTextField(placeholder: "City (e.g. Amsterdam)", text: $vm.city, icon: "mappin")
-                WMTextField(placeholder: "Your age", text: $vm.age, icon: "calendar", keyboardType: .numberPad)
-            }
-        }
-        .padding(WMSpacing.lg)
-    }
-
-    private var industryGoalStep: some View {
-        VStack(alignment: .leading, spacing: WMSpacing.lg) {
-            stepHeader(
-                icon: "chart.bar",
-                title: appVM.isYoungUser ? "Your industry & goals" : "Your expertise",
-                subtitle: appVM.isYoungUser ? "What field are you targeting?" : "Where can you add the most value?"
+                icon: "person.circle",
+                title: "Tell us the basics",
+                subtitle: "Just a few details to get you started."
             )
             VStack(spacing: 14) {
+                WMTextField(placeholder: "Your first name", text: $vm.name, icon: "person")
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Industry")
                         .font(WMFont.caption())
@@ -135,92 +85,114 @@ struct OnboardingView: View {
                     }
                     .pickerStyle(.menu)
                     .tint(.wmPrimary)
-                    .padding(12)
+                    .padding(14)
                     .background(Color.wmSurface)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.wmBorder, lineWidth: 1))
                 }
-                WMTextArea(
-                    placeholder: appVM.isYoungUser ? "What is your main career goal?" : "What motivates you to mentor?",
-                    text: appVM.isYoungUser ? $vm.careerGoal : $vm.motivation
-                )
             }
         }
         .padding(WMSpacing.lg)
     }
 
-    private var linkedInStep: some View {
+    private var goalStep: some View {
         VStack(alignment: .leading, spacing: WMSpacing.lg) {
-            stepHeader(icon: "link.circle", title: "Connect LinkedIn", subtitle: "Optional — but it builds trust and speeds up matching.")
-            VStack(spacing: 16) {
-                HStack(spacing: 12) {
-                    Image(systemName: "link.badge.plus")
-                        .font(.system(size: 28))
-                        .foregroundColor(Color(wmHex: "#0077B5"))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Import from LinkedIn")
-                            .font(WMFont.subheading())
-                            .foregroundColor(.wmText)
-                        Text("Auto-fill your profile in seconds")
-                            .font(WMFont.body(13))
-                            .foregroundColor(.wmTextSecondary)
-                    }
-                    Spacer()
-                    Image(systemName: "arrow.right.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(Color(wmHex: "#0077B5"))
-                }
-                .padding(16)
-                .wmCard(cornerRadius: 14)
-                .onTapGesture { vm.showLinkedInImportAlert = true }
+            stepHeader(
+                icon: appVM.isYoungUser ? "target" : "lightbulb",
+                title: appVM.isYoungUser ? "What are you working toward?" : "What can you help with?",
+                subtitle: appVM.isYoungUser
+                    ? "Describe your main career goal or the question you want help with."
+                    : "What expertise and experience do you bring to the table?"
+            )
+            WMTextArea(
+                placeholder: appVM.isYoungUser
+                    ? "e.g. \"I want to break into investment banking after my MSc...\""
+                    : "e.g. \"I spent 20 years in consulting and can help with...\""  ,
+                text: $vm.goal
+            )
+        }
+        .padding(WMSpacing.lg)
+    }
 
-                Text("or").font(WMFont.body(13)).foregroundColor(.wmTextTertiary)
-                WMTextField(placeholder: "Paste your LinkedIn URL", text: $vm.linkedInPlaceholder, icon: "link")
-            }
-            HStack(spacing: 8) {
-                Image(systemName: "lock.shield.fill").foregroundColor(.wmSuccess)
-                Text("Your data is never shared without your consent.")
-                    .font(.system(size: 12))
-                    .foregroundColor(.wmTextTertiary)
+    private var previewStep: some View {
+        VStack(alignment: .leading, spacing: WMSpacing.lg) {
+            stepHeader(
+                icon: "cup.and.saucer.fill",
+                title: "Here are your first matches",
+                subtitle: appVM.isYoungUser
+                    ? "Senior professionals ready to meet you for coffee."
+                    : "Young professionals who could use your guidance."
+            )
+            VStack(spacing: 10) {
+                ForEach(previewProfiles.prefix(3), id: \.id) { card in
+                    miniMentorCard(card)
+                }
             }
         }
         .padding(WMSpacing.lg)
-        .alert("LinkedIn Import", isPresented: $vm.showLinkedInImportAlert) {
-            Button("OK") {}
-        } message: {
-            // TODO: Integrate LinkedIn OAuth SDK
-            Text("LinkedIn import will be available in the next release. For now, paste your profile URL below.")
+    }
+
+    private var previewProfiles: [DiscoveryCard] {
+        let data = MockDataService.shared
+        return data.seniorProfiles.prefix(3).compactMap { sp in
+            guard let su = data.seniorUsers.first(where: { $0.id == sp.userId }) else { return nil }
+            let result = MatchingService.MatchResult(score: 0.85, breakdown: [:])
+            return DiscoveryCard(id: sp.id, seniorProfile: sp, seniorUser: su, matchResult: result, badges: [])
         }
     }
+
+    private func miniMentorCard(_ card: DiscoveryCard) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(Color.wmPrimary.opacity(0.12)).frame(width: 44, height: 44)
+                Text(card.seniorUser.initials)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.wmPrimary)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(card.seniorUser.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.wmText)
+                Text(card.seniorProfile.currentRole)
+                    .font(.system(size: 12))
+                    .foregroundColor(.wmTextSecondary)
+                Text(card.seniorProfile.topicsCanHelpWith.prefix(2).joined(separator: " · "))
+                    .font(.system(size: 11))
+                    .foregroundColor(.wmTextTertiary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Image(systemName: "cup.and.saucer")
+                .font(.system(size: 14))
+                .foregroundColor(.wmAccent)
+        }
+        .padding(14)
+        .background(Color.wmSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.wmBorder, lineWidth: 1))
+    }
+
+    // MARK: - Navigation buttons
 
     private var navigationButtons: some View {
         VStack(spacing: 12) {
-            WMPrimaryButton(title: vm.step == .linkedIn ? "Finish & start matching" : "Continue") {
-                if vm.step == .linkedIn {
+            WMPrimaryButton(title: vm.step == .preview ? "Get started" : "Continue") {
+                if vm.step == .preview {
                     appVM.completeOnboarding()
                 } else {
                     vm.advance()
                 }
             }
             .disabled(!vm.canAdvance)
-            .opacity(vm.canAdvance ? 1 : 0.5)
-
-            if vm.step == .linkedIn {
-                Button { appVM.completeOnboarding() } label: {
-                    Text("Skip for now")
-                        .font(WMFont.body(14))
-                        .foregroundColor(.wmTextSecondary)
-                        .underline()
-                }
-            }
+            .opacity(vm.canAdvance ? 1 : 0.4)
         }
         .padding(WMSpacing.lg)
     }
 
     private func stepHeader(icon: String, title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon).font(.system(size: 32)).foregroundColor(.wmPrimary)
-            Text(title).font(WMFont.display(26)).foregroundColor(.wmText)
+            Image(systemName: icon).font(.system(size: 30)).foregroundColor(.wmPrimary)
+            Text(title).font(WMFont.display(24)).foregroundColor(.wmText)
             Text(subtitle).font(WMFont.body()).foregroundColor(.wmTextSecondary).lineSpacing(4)
         }
     }

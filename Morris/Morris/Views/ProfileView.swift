@@ -3,14 +3,12 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var appVM: AppViewModel
 
-    @State private var showEditProfile = false
-    @State private var showCodeOfConduct = false
     @State private var showLinkedInAlert = false
+    @State private var showCodeOfConduct = false
 
     private var user: User? { appVM.currentUser }
     private var seniorProfile: SeniorProfessionalProfile? { appVM.currentSeniorProfile }
     private var youngProfile: YoungProfessionalProfile? { appVM.currentYoungProfile }
-    private var badges: [Badge] { user.map { appVM.data.badgesForUser($0.id) } ?? [] }
 
     var body: some View {
         NavigationStack {
@@ -19,6 +17,7 @@ struct ProfileView: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         profileHeader
+                        Divider().background(Color.wmBorder)
                         if let senior = seniorProfile { seniorContent(senior) }
                         if let young = youngProfile { youngContent(young) }
                         settingsSection
@@ -26,155 +25,106 @@ struct ProfileView: View {
                 }
             }
             .navigationBarHidden(true)
-            .sheet(isPresented: $showEditProfile) {
-                if appVM.isSeniorUser {
-                    SeniorProfileSetupView()
-                } else {
-                    YoungQuestionView()
-                }
-            }
-            .sheet(isPresented: $showCodeOfConduct) {
-                CodeOfConductView()
-            }
-            .alert("LinkedIn Verification", isPresented: $showLinkedInAlert) {
-                Button("OK") {}
-            } message: {
-                // TODO: LinkedIn OAuth integration
-                Text("LinkedIn verification will be available in the next update. A verified badge builds trust and increases your match rate by up to 40%.")
-            }
+        }
+        .alert("LinkedIn Verification", isPresented: $showLinkedInAlert) {
+            Button("OK") {}
+        } message: {
+            Text("LinkedIn verification will be available in the next update.")
+        }
+        .sheet(isPresented: $showCodeOfConduct) {
+            CodeOfConductSheet()
         }
     }
 
-    // MARK: - Profile Header
+    // MARK: - Header
 
     private var profileHeader: some View {
-        VStack(spacing: 0) {
-            // Background strip
-            LinearGradient(
-                colors: [Color(wmHex: "#F5E6D3"), Color(wmHex: "#FAF0E1")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .frame(height: 120)
-            .overlay(alignment: .bottomTrailing) {
-                Button { showEditProfile = true } label: {
-                    Label("Edit profile", systemImage: "pencil")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.wmPrimary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color.wmSurface)
-                        .clipShape(Capsule())
-                        .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
-                }
-                .padding(.trailing, 20)
-                .padding(.bottom, 14)
-            }
-
-            // Avatar + name
-            VStack(spacing: 8) {
+        VStack(spacing: 12) {
+            HStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .fill(Color.wmPrimaryLight.opacity(0.4))
-                        .frame(width: 84, height: 84)
-                        .overlay(Circle().stroke(Color.wmSurface, lineWidth: 4))
-                        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 3)
+                        .fill(Color.wmPrimary.opacity(0.12))
+                        .frame(width: 68, height: 68)
                     Text(user?.initials ?? "--")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundColor(.wmPrimaryDark)
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.wmPrimary)
                 }
-                .offset(y: -42)
-                .padding(.bottom, -42)
 
-                VStack(spacing: 4) {
+                VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(user?.name ?? "")
-                            .font(WMFont.display(22))
+                            .font(WMFont.heading(20))
                             .foregroundColor(.wmText)
                         if user?.isVerified == true {
                             Image(systemName: "checkmark.seal.fill")
                                 .foregroundColor(.wmSuccess)
-                                .font(.system(size: 16))
+                                .font(.system(size: 14))
                         }
                     }
                     Text("\(user?.role.rawValue ?? "") · \(user?.city ?? "")")
-                        .font(WMFont.body(14))
+                        .font(.system(size: 14))
                         .foregroundColor(.wmTextSecondary)
-
-                    // Verify LinkedIn CTA
                     if user?.isVerified == false {
                         Button { showLinkedInAlert = true } label: {
                             HStack(spacing: 4) {
-                                Image(systemName: "link")
-                                    .font(.system(size: 11))
-                                Text("Verify with LinkedIn")
-                                    .font(.system(size: 12, weight: .semibold))
+                                Image(systemName: "link").font(.system(size: 10))
+                                Text("Verify with LinkedIn").font(.system(size: 12, weight: .semibold))
                             }
                             .foregroundColor(Color(wmHex: "#0077B5"))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color(wmHex: "#0077B5").opacity(0.1))
-                            .clipShape(Capsule())
                         }
-                        .padding(.top, 4)
                     }
                 }
-                .padding(.top, WMSpacing.md)
+
+                Spacer()
             }
             .padding(.horizontal, WMSpacing.md)
+            .padding(.top, WMSpacing.lg)
             .padding(.bottom, WMSpacing.md)
         }
         .background(Color.wmSurface)
     }
 
-    // MARK: - Senior Content
+    // MARK: - Senior content
 
     private func seniorContent(_ profile: SeniorProfessionalProfile) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Stats row
-            statsRow(helpedCount: profile.helpedCount, rating: profile.rating, years: profile.yearsOfExperience)
+            statsRow(values: [
+                ("\(profile.helpedCount)", "Helped"),
+                (String(format: "%.1f", profile.rating), "Rating"),
+                ("\(profile.yearsOfExperience)", "Yrs exp")
+            ])
 
-            // Badges
-            if !badges.isEmpty {
-                sectionCard(title: "Your badges", icon: "medal.fill") {
-                    BadgesRow(badges: badges, compact: false)
-                }
+            listSection(title: "Current role", icon: "briefcase") {
+                Text(profile.currentRole)
+                    .font(WMFont.body())
+                    .foregroundColor(.wmText)
             }
 
-            // Industries
-            sectionCard(title: "Industries", icon: "briefcase.fill") {
-                FlowLayout(spacing: 6) {
-                    ForEach(profile.industries, id: \.id) { IndustryPill(industry: $0) }
-                }
+            listSection(title: "Can help with", icon: "lightbulb") {
+                Text(profile.topicsCanHelpWith.joined(separator: ", "))
+                    .font(.system(size: 14))
+                    .italic()
+                    .foregroundColor(.wmTextSecondary)
+                    .lineSpacing(3)
             }
 
-            // Topics
-            sectionCard(title: "Topics you help with", icon: "lightbulb.fill") {
-                FlowLayout(spacing: 6) {
-                    ForEach(profile.topicsCanHelpWith, id: \.self) { WMTag(text: $0) }
-                }
-            }
-
-            // Career history
-            sectionCard(title: "Career history", icon: "clock.fill") {
-                VStack(spacing: 10) {
+            listSection(title: "Career history", icon: "clock") {
+                VStack(alignment: .leading, spacing: 10) {
                     ForEach(profile.pastRoles) { role in
                         pastRoleRow(role)
                     }
                 }
             }
 
-            // Motivation
-            sectionCard(title: "Why I mentor", icon: "quote.opening") {
+            listSection(title: "Why I mentor", icon: "quote.opening") {
                 Text("\u{201C}\(profile.motivation)\u{201D}")
-                    .font(.system(size: 14, design: .serif))
+                    .font(.system(size: 14, design: .default))
                     .italic()
-                    .foregroundColor(.wmText)
+                    .foregroundColor(.wmTextSecondary)
                     .lineSpacing(4)
             }
 
-            // Availability
-            sectionCard(title: "Availability", icon: "calendar.badge.clock") {
+            listSection(title: "Availability", icon: "calendar.badge.clock") {
                 Text(profile.availability)
                     .font(WMFont.body())
                     .foregroundColor(.wmTextSecondary)
@@ -182,91 +132,83 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Young Content
+    // MARK: - Young content
 
     private func youngContent(_ profile: YoungProfessionalProfile) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Stats row
-            statsRow(helpedCount: nil, rating: nil, years: nil)
+            statsRow(values: [
+                ("\(appVM.currentMatches.count)", "Matches"),
+                (profile.industry.rawValue, "Industry")
+            ])
 
-            // Industry
-            sectionCard(title: "Target industry", icon: "briefcase.fill") {
-                IndustryPill(industry: profile.industry)
-            }
-
-            // Career goal
-            sectionCard(title: "Career goal", icon: "target") {
+            listSection(title: "Career goal", icon: "target") {
                 Text(profile.careerGoal)
                     .font(WMFont.body())
                     .foregroundColor(.wmTextSecondary)
                     .lineSpacing(4)
             }
-
-            // Current question
-            if let qId = profile.currentQuestionId, let q = appVM.data.question(for: qId) {
-                sectionCard(title: "Active question", icon: "questionmark.bubble.fill") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(q.title)
-                            .font(WMFont.subheading(15))
-                            .foregroundColor(.wmText)
-                        Text(q.description)
-                            .font(WMFont.body(13))
-                            .foregroundColor(.wmTextSecondary)
-                            .lineLimit(3)
-                        FlowLayout(spacing: 6) {
-                            ForEach(q.tags, id: \.self) { WMTag(text: $0, color: .wmTextSecondary) }
-                        }
-                    }
-                }
-            }
         }
     }
 
-    // MARK: - Stats Row
+    // MARK: - Stats row
 
-    private func statsRow(helpedCount: Int?, rating: Double?, years: Int?) -> some View {
+    private func statsRow(values: [(String, String)]) -> some View {
         HStack(spacing: 0) {
-            if let count = helpedCount {
-                statCell(value: "\(count)", label: "People helped")
-                Divider().frame(height: 40)
-            }
-            if let r = rating {
-                statCell(value: String(format: "%.1f", r), label: "Rating")
-                Divider().frame(height: 40)
-            }
-            if let y = years {
-                statCell(value: "\(y)", label: "Years exp.")
-            } else {
-                statCell(value: "\(appVM.currentMatches.count)", label: "Matches")
+            ForEach(Array(values.enumerated()), id: \.offset) { i, pair in
+                if i > 0 { Divider().frame(height: 36) }
+                VStack(spacing: 3) {
+                    Text(pair.0)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.wmPrimary)
+                    Text(pair.1)
+                        .font(.system(size: 11))
+                        .foregroundColor(.wmTextSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
             }
         }
-        .frame(maxWidth: .infinity)
-        .wmCard(cornerRadius: 0, padding: 0)
+        .background(Color.wmSurface)
         .padding(.vertical, 2)
     }
 
-    private func statCell(value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(.wmPrimary)
-            Text(label)
-                .font(.system(size: 11))
-                .foregroundColor(.wmTextSecondary)
+    // MARK: - List section
+
+    private func listSection<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .foregroundColor(.wmPrimary)
+                    .frame(width: 18)
+                Text(title)
+                    .font(WMFont.caption(12))
+                    .foregroundColor(.wmTextSecondary)
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+            }
+            .padding(.horizontal, WMSpacing.md)
+            .padding(.top, 20)
+            .padding(.bottom, 10)
+
+            content()
+                .padding(.horizontal, WMSpacing.md)
+                .padding(.bottom, 16)
+
+            Divider().background(Color.wmBorder)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .background(Color.wmSurface)
     }
 
-    // MARK: - Past Role Row
+    // MARK: - Past role row
 
     private func pastRoleRow(_ role: PastRole) -> some View {
         HStack(alignment: .top, spacing: 10) {
             VStack(spacing: 4) {
-                Circle().fill(Color.wmPrimary).frame(width: 8, height: 8).padding(.top, 5)
+                Circle().fill(Color.wmPrimary).frame(width: 7, height: 7).padding(.top, 4)
                 Rectangle().fill(Color.wmBorder).frame(width: 1.5).frame(maxHeight: .infinity)
             }
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(role.title)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.wmText)
@@ -284,52 +226,21 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Section Card
-
-    private func sectionCard<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.wmPrimary)
-                Text(title)
-                    .font(WMFont.caption(11))
-                    .foregroundColor(.wmTextSecondary)
-                    .textCase(.uppercase)
-                    .tracking(0.4)
-            }
-            content()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(WMSpacing.md)
-        .background(Color.wmSurface)
-        .padding(.horizontal, WMSpacing.md)
-        .padding(.top, WMSpacing.sm)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-    }
-
     // MARK: - Settings
 
     private var settingsSection: some View {
         VStack(spacing: 0) {
+            Divider().background(Color.wmBorder).padding(.top, WMSpacing.md)
+
             settingsRow(icon: "shield.fill", title: "Code of Conduct", color: .wmSuccess) {
                 showCodeOfConduct = true
             }
-            Divider().padding(.leading, 52)
-            settingsRow(icon: "exclamationmark.triangle.fill", title: "Report a concern", color: .wmDanger) {
-                // TODO: Show report flow
-            }
-            Divider().padding(.leading, 52)
-            settingsRow(icon: "questionmark.circle.fill", title: "Help & FAQ", color: .wmTextSecondary) {
-                // TODO: Open help centre
-            }
+            Divider().padding(.leading, 50)
+            settingsRow(icon: "questionmark.circle.fill", title: "Help & FAQ", color: .wmTextSecondary) {}
+            Divider().padding(.leading, 50)
+            settingsRow(icon: "exclamationmark.triangle.fill", title: "Report a concern", color: .wmDanger) {}
         }
         .background(Color.wmSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
-        .padding(WMSpacing.md)
-        .padding(.top, WMSpacing.sm)
         .padding(.bottom, WMSpacing.xxl)
     }
 
@@ -337,9 +248,10 @@ struct ProfileView: View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: 15))
                     .foregroundColor(color)
-                    .frame(width: 30)
+                    .frame(width: 22)
+                    .padding(.leading, WMSpacing.md)
                 Text(title)
                     .font(WMFont.body())
                     .foregroundColor(.wmText)
@@ -347,10 +259,90 @@ struct ProfileView: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.wmTextTertiary)
+                    .padding(.trailing, WMSpacing.md)
             }
-            .padding(.horizontal, WMSpacing.md)
             .padding(.vertical, 14)
         }
+    }
+}
+
+// MARK: - Code of Conduct Sheet (inline)
+
+struct CodeOfConductSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: WMSpacing.lg) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Image(systemName: "shield.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(.wmSuccess)
+                        Text("Code of Conduct")
+                            .font(WMFont.display(26))
+                            .foregroundColor(.wmText)
+                        Text("WisdomMatch is built on mutual respect. These guidelines keep the community safe and valuable for everyone.")
+                            .font(WMFont.body())
+                            .foregroundColor(.wmTextSecondary)
+                            .lineSpacing(4)
+                    }
+
+                    conductSection(title: "Respect & Professionalism", items: [
+                        "Treat every interaction with courtesy and professional respect.",
+                        "Be on time for your coffee meetings. If you can't make it, cancel at least 24 hours in advance.",
+                        "Keep conversations focused on career guidance."
+                    ])
+
+                    conductSection(title: "Safety & Privacy", items: [
+                        "Never share personal contact details until you feel comfortable.",
+                        "All meetings take place at partner cafés — never private locations.",
+                        "Report any behaviour that makes you uncomfortable."
+                    ])
+
+                    conductSection(title: "Commitment", items: [
+                        "Senior mentors commit to at least one meeting per month.",
+                        "Young professionals commit to coming prepared with a clear question or goal.",
+                        "Both parties agree to give honest, constructive feedback after meetings."
+                    ])
+
+                    Text("Violations may result in removal from the platform. Questions? hello@wisdommatch.nl")
+                        .font(.system(size: 13))
+                        .foregroundColor(.wmTextTertiary)
+                        .lineSpacing(3)
+                }
+                .padding(WMSpacing.lg)
+            }
+            .background(Color.wmBackground)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }.foregroundColor(.wmPrimary)
+                }
+            }
+        }
+    }
+
+    private func conductSection(title: String, items: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(WMFont.subheading(15))
+                .foregroundColor(.wmText)
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(items, id: \.self) { item in
+                    HStack(alignment: .top, spacing: 10) {
+                        Circle().fill(Color.wmSuccess).frame(width: 6, height: 6).padding(.top, 5)
+                        Text(item)
+                            .font(.system(size: 14))
+                            .foregroundColor(.wmTextSecondary)
+                            .lineSpacing(3)
+                    }
+                }
+            }
+        }
+        .padding(WMSpacing.md)
+        .background(Color.wmSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
